@@ -536,7 +536,6 @@ Rules:
 async function analyzeComparison() {
   const done = proposals.filter(p => p.status === 'done');
   if (!done.length) return;
-  if (!apiKey) { alert('Please configure your OpenAI API key first.'); return; }
 
   const btn = document.getElementById('analyze-btn');
   const statusEl = document.getElementById('analyze-status');
