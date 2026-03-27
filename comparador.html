@@ -348,6 +348,10 @@ async function handleFiles(files) {
       p.pageImages = extracted.images; // null for text PDFs, base64[] for scanned
       p.isScanned = extracted.isScanned;
       const info = await parseBasicInfo(p.rawText, p.pageImages);
+      // Sanitize: replace string "null" with empty string for display fields
+      for (const k of ['company','contact','phone','email','date','projectName','projectLocation','clientName']) {
+        if (info[k] === 'null' || info[k] === null) info[k] = '';
+      }
       Object.assign(p, info);
       // Auto-fill project info fields if still empty
       const fillIfEmpty = (id, val) => {
