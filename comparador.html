@@ -341,22 +341,17 @@ async function handleFiles(files) {
       p.rawText = extracted.text;
       p.pageImages = extracted.images; // null for text PDFs, base64[] for scanned
       p.isScanned = extracted.isScanned;
-      if (apiKey) {
-        const info = await parseBasicInfo(p.rawText, p.pageImages);
-        Object.assign(p, info);
-        // Auto-fill project info fields if still empty
-        const fillIfEmpty = (id, val) => {
-          if (!val) return;
-          const el = document.getElementById(id);
-          if (el && !el.value.trim()) el.value = val;
-        };
-        fillIfEmpty('proj-name',     info.projectName);
-        fillIfEmpty('proj-location', info.projectLocation);
-        fillIfEmpty('proj-company',  info.clientName);
-      } else {
-        // Fallback: just use filename as company
-        p.company = file.name.replace(/\.pdf$/i,'').replace(/[-_]/g,' ').trim();
-      }
+      const info = await parseBasicInfo(p.rawText, p.pageImages);
+      Object.assign(p, info);
+      // Auto-fill project info fields if still empty
+      const fillIfEmpty = (id, val) => {
+        if (!val) return;
+        const el = document.getElementById(id);
+        if (el && !el.value.trim()) el.value = val;
+      };
+      fillIfEmpty('proj-name',     info.projectName);
+      fillIfEmpty('proj-location', info.projectLocation);
+      fillIfEmpty('proj-company',  info.clientName);
       p.status = 'done';
     } catch(err) {
       p.status = 'error'; p.errorMsg = err.message;
