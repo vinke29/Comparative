@@ -13,6 +13,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .header { background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color: white; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .header-text h1 { font-size: 1.6rem; font-weight: 700; }
 .header-text p { opacity: 0.72; margin-top: 5px; font-size: 0.9rem; }
+.header-right { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.for-badge { font-size: 0.78rem; color: rgba(255,255,255,0.55); letter-spacing: 0.03em; white-space: nowrap; }
+.for-badge strong { color: rgba(255,255,255,0.9); font-weight: 600; }
 .lang-toggle { display: flex; background: rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .lang-btn { background: none; border: none; color: rgba(255,255,255,0.65); font-size: 0.82rem; font-weight: 700; padding: 7px 14px; cursor: pointer; font-family: inherit; transition: all 0.15s; letter-spacing: 0.04em; }
 .lang-btn.active { background: rgba(255,255,255,0.22); color: white; }
@@ -119,9 +122,12 @@ tr.tot-row td { background: #1a365d; color: white; font-weight: 700; font-size: 
     <h1 data-i18n="appTitle">Proposal Comparator</h1>
     <p data-i18n="appSubtitle">Upload any proposals — AI analyzes them together and builds a comparable line-item matrix</p>
   </div>
-  <div class="lang-toggle">
-    <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" id="lang-es" onclick="setLang('es')">ES</button>
+  <div class="header-right">
+    <span class="for-badge">Prepared for <strong>Juan Malave</strong></span>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="lang-es" onclick="setLang('es')">ES</button>
+    </div>
   </div>
 </div>
 
