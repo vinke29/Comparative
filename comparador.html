@@ -470,9 +470,11 @@ async function parseBasicInfo(text, pageImages = null) {
 }
 
 Critical rules:
-- "company" and "contact" are always from the SUBMITTING firm — the one offering the service
-- "contact" must NOT be the client or the person the proposal is sent to. Look for signatures, "Prepared by", "Submitted by", or the person's name at the end of the letter.
-- "clientName" is who the proposal is addressed TO (e.g. "Attention: German Coto" or "Dear Mr. Smith")
+- "company" and "contact" are always from the SUBMITTING firm — the one offering the service, whose letterhead this is
+- "contact" must be someone FROM the submitting firm: look for signatures at the end, "Prepared by", "Submitted by", "Project Manager", or names whose email domain matches the submitting firm's domain
+- NEVER use the recipient as "contact". Any name that appears under "Attention:", "To:", "Dear", or "RE:" is the CLIENT — put them in "clientName" and leave "contact" for the submitting firm's person
+- "clientName" is who the proposal is addressed TO (e.g. "Attention: Juan Malave" or "Dear Mr. Smith" → clientName = that person or their company)
+- The contact's email domain should match the submitting firm, NOT the client's company
 - totalPrice: find the single FINAL bottom-line number — look for "TOTAL", "Lump Sum", "Total Fee", "Base Bid", "Grand Total", "BID PRICE". This is usually the last and largest dollar figure in the pricing section. Return as a plain number with no $ or commas. Do NOT guess or use a sub-total or line-item price.
 - If a field is not found, use null for numbers and "" for strings.
 - Do NOT infer or hallucinate any field — only return values explicitly present in the text.`;
