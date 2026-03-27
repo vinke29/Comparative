@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal Comparator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748; }
+
+.header { background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color: white; padding: 24px 32px; }
+.header h1 { font-size: 1.6rem; font-weight: 700; }
+.header p { opacity: 0.72; margin-top: 5px; font-size: 0.9rem; }
+
+.container { max-width: 1300px; margin: 0 auto; padding: 28px 22px; display: flex; flex-direction: column; gap: 20px; }
+
+
+/* Buttons */
+.btn { padding: 9px 20px; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+.btn-blue { background: #2b6cb0; color: white; }
+.btn-blue:hover:not(:disabled) { background: #1a365d; }
+.btn-blue:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-gray { background: #edf2f7; color: #4a5568; }
+.btn-gray:hover { background: #e2e8f0; }
+.btn-green { background: #276749; color: white; box-shadow: 0 2px 8px rgba(39,103,73,0.3); }
+.btn-green:hover:not(:disabled) { background: #1c4f37; }
+.btn-green:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-lg { padding: 12px 28px; font-size: 1rem; }
+
+/* Project Info */
+.section-card { background: white; border-radius: 12px; padding: 20px 22px; margin-bottom: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.section-title { font-size: 0.75rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+.proj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media(max-width:600px) { .proj-grid { grid-template-columns: 1fr; } }
+
+/* Upload */
+.upload-zone { border: 2px dashed #90cdf4; border-radius: 12px; background: white; padding: 40px 28px; text-align: center; cursor: pointer; transition: all 0.18s; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.upload-zone:hover, .upload-zone.drag-over { border-color: #2b6cb0; background: #ebf8ff; }
+.upload-zone h3 { font-size: 1.1rem; font-weight: 600; color: #2b6cb0; margin-top: 10px; }
+.upload-zone p { color: #718096; margin-top: 5px; font-size: 0.85rem; }
+
+/* Proposal Cards */
+.proposals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 0; }
+.proposal-card { background: white; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-top: 4px solid #2b6cb0; }
+.proposal-card.processing { border-top-color: #ed8936; }
+.proposal-card.error { border-top-color: #e53e3e; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.card-title { font-weight: 700; font-size: 0.95rem; color: #1a365d; }
+.card-sub { font-size: 0.7rem; color: #a0aec0; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+.remove-btn { background: none; border: none; cursor: pointer; color: #cbd5e0; padding: 2px 5px; border-radius: 4px; font-size: 0.9rem; }
+.remove-btn:hover { color: #e53e3e; background: #fff5f5; }
+.field-group { margin-bottom: 9px; }
+.field-label { font-size: 0.68rem; font-weight: 700; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+.field-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 9px; font-size: 0.85rem; color: #2d3748; background: #fafafa; font-family: inherit; }
+.field-input:focus { outline: none; border-color: #2b6cb0; background: white; }
+.field-input.price-field { font-size: 1.1rem; font-weight: 700; color: #22543d; background: #f0fff4; border-color: #9ae6b4; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top-color: #2b6cb0; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.parse-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+.parse-badge.ai { background: #e9d8fd; color: #553c9a; }
+
+/* Analyze Bar */
+.analyze-bar { margin-top: 0; background: white; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.analyze-bar h3 { font-size: 1rem; font-weight: 700; color: #1a365d; }
+.analyze-bar p { font-size: 0.85rem; color: #718096; margin-top: 2px; }
+.analyze-status { font-size: 0.85rem; color: #718096; }
+.analyze-status.running { color: #2b6cb0; display: flex; align-items: center; gap: 8px; }
+.analyze-status.done { color: #22543d; font-weight: 600; }
+.analyze-status.err { color: #c53030; }
+
+/* Comparison Table */
+.comparison-wrapper { margin-top: 22px; }
+.comparison-card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+.comparison-head { background: #1a365d; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+.comparison-head h2 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+.project-type-badge { font-size: 0.78rem; background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 99px; }
+.table-wrap { overflow-x: auto; }
+table.ct { width: 100%; border-collapse: collapse; font-size: 0.81rem; }
+table.ct th { background: #2d3748; color: white; padding: 9px 13px; text-align: left; font-weight: 600; white-space: nowrap; }
+table.ct th:first-child { min-width: 240px; }
+table.ct td { padding: 8px 13px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
+table.ct tr:hover td { background: #f7fafc; }
+tr.sec-row td { background: #edf2f7; font-weight: 700; color: #2b6cb0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr.tot-row td { background: #1a365d; color: white; font-weight: 700; font-size: 0.88rem; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.73rem; font-weight: 600; }
+.b-inc { background: #c6f6d5; color: #22543d; }
+.b-exc { background: #fed7d7; color: #742a2a; }
+.b-na  { background: #f7fafc; color: #a0aec0; border: 1px solid #e2e8f0; }
+.b-det { background: #bee3f8; color: #1a365d; font-weight: 700; }
+
+/* Scope description */
+.scope-desc { padding: 14px 20px; background: #f7fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; color: #4a5568; line-height: 1.6; font-style: italic; }
+
+/* Recommendation */
+.rec-box { margin-top: 14px; background: #fffbeb; border: 1px solid #f6d860; border-radius: 10px; padding: 16px 20px; }
+.rec-label { font-size: 0.75rem; font-weight: 700; color: #744210; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+.rec-text { font-size: 0.88rem; color: #2d3748; line-height: 1.6; }
+
+/* Actions */
+.actions { margin-top: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ok-msg { color: #22543d; font-size: 0.85rem; font-weight: 600; background: #f0fff4; padding: 7px 12px; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<script src="config.js"></script>
+<div class="header">
+  <h1>Proposal Comparator</h1>
+  <p>Upload any proposals — AI analyzes them together and builds a comparable line-item matrix</p>
+</div>
+
+<div class="container">
+
+  <!-- Upload -->
+  <div class="upload-zone" id="upload-zone">
+    <div style="font-size:2.4rem">📄</div>
+    <h3>Drag proposal PDFs here</h3>
+    <p>Or click to select — upload multiple proposals at once, any type</p>
+    <input type="file" id="file-input" multiple accept=".pdf" style="display:none">
+  </div>
+
+  <!-- Project Info — shown after proposals are loaded, auto-filled by AI -->
+  <div class="section-card" id="project-info-card" style="display:none">
+    <div class="section-title">Project Information <span style="font-size:0.7rem;font-weight:400;color:#a0aec0;text-transform:none;letter-spacing:0">— auto-filled from proposals, edit as needed</span></div>
+    <div class="proj-grid">
+      <div class="field-group">
+        <div class="field-label">Client / Company</div>
+        <input type="text" class="field-input" id="proj-company" placeholder="Client or company name">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Project Name</div>
+        <input type="text" class="field-input" id="proj-name" placeholder="Project name">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Location</div>
+        <input type="text" class="field-input" id="proj-location" placeholder="Address / location">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Bid Category</div>
+        <input type="text" class="field-input" id="proj-category" placeholder="e.g. Electrical, Structural Peer Review…">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Output Language</div>
+        <select class="field-input" id="output-language" onchange="outputLanguage=this.value">
+          <option value="English">English</option>
+          <option value="Spanish">Español</option>
+          <option value="French">Français</option>
+          <option value="Portuguese">Português</option>
+          <option value="Italian">Italiano</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proposal Cards -->
+  <div class="proposals-grid" id="proposals-grid" style="display:none"></div>
+
+  <!-- Analyze Bar -->
+  <div class="analyze-bar" id="analyze-bar" style="display:none">
+    <div style="flex:1;min-width:200px">
+      <h3>Ready to Compare</h3>
+      <p id="analyze-desc">Upload at least 2 proposals, then click Analyze to generate the comparison matrix.</p>
+    </div>
+    <div id="analyze-status" class="analyze-status"></div>
+    <button class="btn btn-green btn-lg" id="analyze-btn" onclick="analyzeComparison()">🔍 Analyze &amp; Compare</button>
+  </div>
+
+  <!-- Comparison Table -->
+  <div class="comparison-wrapper" id="comparison-wrapper" style="display:none">
+    <div class="comparison-card">
+      <div class="comparison-head">
+        <h2>Scope Overview</h2>
+        <span class="project-type-badge" id="project-type-badge"></span>
+      </div>
+      <div id="scope-description" class="scope-desc" style="display:none"></div>
+      <div class="table-wrap">
+        <table class="ct" id="comparison-table"></table>
+      </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="rec-box" id="recommendation-box" style="display:none">
+      <div class="rec-label">💡 AI Recommendation</div>
+      <div class="rec-text" id="recommendation-text"></div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions" id="actions-bar" style="display:none">
+    <button class="btn btn-blue btn-lg" id="download-btn"
+      onclick="this.disabled=true;this.textContent='Generating…';generateExcel().finally(()=>{this.disabled=false;this.textContent='⬇ Download Excel'})">
+      ⬇ Download Excel
+    </button>
+    <span id="status-msg"></span>
+  </div>
+
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let proposals = [];       // [{id, filename, status, company, contact, phone, email, date, totalPrice, rawText}]
+let comparisonData = null; // AI-generated comparison structure
+let outputLanguage = 'English';
+
+// ── API Key — loaded from config.js (gitignored, never committed) ─────────────
+const apiKey = (window.APP_CONFIG && window.APP_CONFIG.openaiApiKey) || '';
+if (!apiKey) console.warn('No API key found. Create config.js with window.APP_CONFIG = { openaiApiKey: "sk-..." }');
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+const uploadZone = document.getElementById('upload-zone');
+const fileInput  = document.getElementById('file-input');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+
+async function handleFiles(files) {
+  for (const file of files) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) continue;
+    const id = Date.now() + '_' + Math.random().toString(36).slice(2);
+    const p = { id, filename: file.name, status: 'processing',
+                company:'', contact:'', phone:'', email:'', date:'', totalPrice:null, rawText:'' };
+    proposals.push(p);
+    renderCards();
+    updateAnalyzeBar();
+
+    try {
+      const extracted = await extractPDFContent(file);
+      p.rawText = extracted.text;
+      p.pageImages = extracted.images; // null for text PDFs, base64[] for scanned
+      p.isScanned = extracted.isScanned;
+      if (apiKey) {
+        const info = await parseBasicInfo(p.rawText, p.pageImages);
+        Object.assign(p, info);
+        // Auto-fill project info fields if still empty
+        const fillIfEmpty = (id, val) => {
+          if (!val) return;
+          const el = document.getElementById(id);
+          if (el && !el.value.trim()) el.value = val;
+        };
+        fillIfEmpty('proj-name',     info.projectName);
+        fillIfEmpty('proj-location', info.projectLocation);
+        fillIfEmpty('proj-company',  info.clientName);
+      } else {
+        // Fallback: just use filename as company
+        p.company = file.name.replace(/\.pdf$/i,'').replace(/[-_]/g,' ').trim();
+      }
+      p.status = 'done';
+    } catch(err) {
+      p.status = 'error'; p.errorMsg = err.message;
+    }
+    renderCards();
+    updateAnalyzeBar();
+    // Show project info card once at least one proposal is done
+    if (proposals.some(x => x.status === 'done')) {
+      document.getElementById('project-info-card').style.display = 'block';
+    }
+  }
+  fileInput.value = '';
+}
+
+// ── PDF Extraction ────────────────────────────────────────────────────────────
+async function extractPDFContent(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+
+  // Step 1: extract text
+  let full = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const byY = {};
+    for (const item of content.items) {
+      if (!item.str.trim()) continue;
+      const y = Math.round(item.transform[5]);
+      if (!byY[y]) byY[y] = [];
+      byY[y].push({ x: item.transform[4], str: item.str.trim() });
+    }
+    const ys = Object.keys(byY).map(Number).sort((a,b) => b - a);
+    for (const y of ys) {
+      full += byY[y].sort((a,b) => a.x - b.x).map(i => i.str).join(' ') + '\n';
+    }
+    full += '\n';
+  }
+
+  const wordCount = full.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount >= 80) {
+    return { text: full, images: null, isScanned: false };
+  }
+
+  // Step 2: scanned PDF — render each page to canvas and return base64 images
+  const images = [];
+  const MAX_PAGES = 12; // cap to avoid huge API payloads
+  for (let i = 1; i <= Math.min(pdf.numPages, MAX_PAGES); i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.8 }); // good resolution for OCR
+    const canvas = document.createElement('canvas');
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    images.push(canvas.toDataURL('image/jpeg', 0.82).split(',')[1]); // base64 only
+  }
+  return { text: '', images, isScanned: true };
+}
+
+// ── OpenAI Helper ─────────────────────────────────────────────────────────────
+async function openaiChat(messages, maxTokens = 2000) {
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      max_tokens: maxTokens,
+      messages
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  return JSON.parse(data.choices[0].message.content);
+}
+
+// ── Step 1: Basic Info Per Proposal ──────────────────────────────────────────
+async function parseBasicInfo(text, pageImages = null) {
+  const prompt = `From this proposal document, extract the following fields and return ONLY valid JSON:`;
+  const schema = `
+{
+  "company": "name of the company/firm SUBMITTING (writing) the proposal",
+  "contact": "full name of the person FROM the submitting firm — the author, signer, or project manager who wrote this proposal",
+  "phone": "phone number of the submitting firm's contact",
+  "email": "email address of the submitting firm's contact",
+  "date": "proposal date",
+  "totalPrice": 143500.00,
+  "projectName": "name or description of the project this proposal is for",
+  "projectLocation": "address or location of the project",
+  "clientName": "name of the client or company this proposal is addressed TO (the recipient)"
+}
+
+Critical rules:
+- "company" and "contact" are always from the SUBMITTING firm — the one offering the service
+- "contact" must NOT be the client or the person the proposal is sent to. Look for signatures, "Prepared by", "Submitted by", or the person's name at the end of the letter.
+- "clientName" is who the proposal is addressed TO (e.g. "Attention: German Coto" or "Dear Mr. Smith")
+- totalPrice: find the single FINAL bottom-line number — look for "TOTAL", "Lump Sum", "Total Fee", "Base Bid", "Grand Total", "BID PRICE". This is usually the last and largest dollar figure in the pricing section. Return as a plain number with no $ or commas. Do NOT guess or use a sub-total or line-item price.
+- If a field is not found, use null for numbers and "" for strings.
+- Do NOT infer or hallucinate any field — only return values explicitly present in the text.`;
+
+  // Vision path for scanned PDFs
+  if (pageImages && pageImages.length) {
+    const imageContent = pageImages.map(b64 => ({
+      type: 'image_url',
+      image_url: { url: `data:image/jpeg;base64,${b64}`, detail: 'auto' }
+    }));
+    return openaiChat([
+      { role: 'system', content: 'Extract basic proposal info from document images. Return only valid JSON.' },
+      { role: 'user', content: [
+        { type: 'text', text: prompt + schema },
+        ...imageContent
+      ]}
+    ], 500);
+  }
+
+  // Text path
+  const head = text.slice(0, 8000);
+  const tail = text.length > 8000 ? '\n\n[...]\n\n' + text.slice(-4000) : '';
+
+  return openaiChat([
+    { role: 'system', content: 'Extract basic proposal info. Return only valid JSON. String values should be in the language of the source document.' },
+    { role: 'user', content: prompt + schema + `\n\nProposal text:\n${head}${tail}` }
+  ], 500);
+}
+
+// ── Step 1b: Hourly Rates Extraction Per Proposal ────────────────────────────
+async function extractHourlyRates(text, pageImages = null) {
+  const ratePrompt = `Find EVERY hourly billing/labor rate listed in this proposal document.
+
+Return ONLY valid JSON:
+{
+  "rates": [
+    { "role": "Exact title as written in document", "rate": "$185.00" }
+  ]
+}
+
+Rules:
+- Include every single role — do NOT summarize, merge, or skip any
+- Keep the role title exactly as written (e.g. "Senior Vice President/Principal", "Building Information Modeler", "Analyst")
+- "rate" is the dollar amount as written (e.g. "$380.00", "$155 - $180", "$170 - $235")
+- Look for sections titled "Hourly Rates", "Rate Schedule", "Billing Rates", "Standard Rates", "Fee Schedule", "Labor Rates"
+- If no hourly rates are found anywhere, return { "rates": [] }`;
+
+  if (pageImages && pageImages.length) {
+    const imageContent = pageImages.map(b64 => ({
+      type: 'image_url',
+      image_url: { url: `data:image/jpeg;base64,${b64}`, detail: 'auto' }
+    }));
+    return openaiChat([
+      { role: 'system', content: 'Extract hourly billing rates from document images. Return only valid JSON.' },
+      { role: 'user', content: [{ type: 'text', text: ratePrompt }, ...imageContent] }
+    ], 800);
+  }
+
+  const fullText = text.slice(0, 50000);
+  return openaiChat([
+    { role: 'system', content: 'Extract hourly billing rates from a proposal. Return only valid JSON.' },
+    { role: 'user', content: ratePrompt + `\n\nDocument text:\n${fullText}` }
+  ], 800);
+}
+
+// ── Step 2: Full Comparison Analysis ─────────────────────────────────────────
+async function analyzeComparison() {
+  const done = proposals.filter(p => p.status === 'done');
+  if (!done.length) return;
+  if (!apiKey) { alert('Please configure your OpenAI API key first.'); return; }
+
+  const btn = document.getElementById('analyze-btn');
+  const statusEl = document.getElementById('analyze-status');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+  statusEl.className = 'analyze-status running';
+  statusEl.innerHTML = '<span class="spinner"></span> AI is reading all proposals…';
+  comparisonData = null;
+  document.getElementById('comparison-wrapper').style.display = 'none';
+  document.getElementById('actions-bar').style.display = 'none';
+  document.getElementById('recommendation-box').style.display = 'none';
+
+  try {
+    // Step 2a: extract hourly rates per proposal
+    statusEl.innerHTML = '<span class="spinner"></span> Extracting hourly rates…';
+    const rateExtracts = await Promise.all(done.map(p => extractHourlyRates(p.rawText, p.pageImages)));
+
+    // Step 2b: build proposal content for main analysis
+    statusEl.innerHTML = '<span class="spinner"></span> AI is reading all proposals…';
+
+    // For text-based proposals: concatenate into one string as before
+    // For scanned proposals: we'll inject their images directly into the message
+    const proposalTexts = done.map((p, i) => {
+      if (p.isScanned) return `=== PROPOSAL ${i+1}: ${p.company || p.filename} === [see images below]`;
+      const head = p.rawText.slice(0, 10000);
+      const tail = p.rawText.length > 10000 ? '\n\n[...]\n\n' + p.rawText.slice(-5000) : '';
+      return `=== PROPOSAL ${i+1}: ${p.company || p.filename} ===\n${head}${tail}`;
+    }).join('\n\n---\n\n');
+
+    // Collect images from scanned proposals (up to 6 pages each to keep payload manageable)
+    const scannedImages = [];
+    for (const p of done) {
+      if (p.isScanned && p.pageImages) {
+        p.pageImages.slice(0, 6).forEach(b64 => scannedImages.push(b64));
+      }
+    }
+
+    // Build verified price + pre-extracted rate context to prevent hallucination
+    const verifiedContext = done.map((p, i) => {
+      const price = p.totalPrice ? `$${Number(p.totalPrice).toLocaleString('en-US')}` : 'not specified';
+      const rates = rateExtracts[i]?.rates?.length
+        ? rateExtracts[i].rates.map(r => `  • ${r.role}: ${r.rate}`).join('\n')
+        : '  (none found)';
+      return `PROPOSAL ${i+1} — ${p.company || p.filename}\n  Verified total: ${price}\n  Hourly rates:\n${rates}`;
+    }).join('\n\n');
+
+    const lang = outputLanguage || 'English';
+
+    // Build user message content — inject scanned images if any
+    const buildUserContent = (textBody) => {
+      if (!scannedImages.length) return textBody;
+      return [
+        { type: 'text', text: textBody },
+        ...scannedImages.map(b64 => ({
+          type: 'image_url',
+          image_url: { url: `data:image/jpeg;base64,${b64}`, detail: 'auto' }
+        }))
+      ];
+    };
+
+    const result = await openaiChat([
+      { role: 'system', content: `You are an expert at analyzing and comparing professional proposals. Return only valid JSON. Write all text fields in ${lang}.` },
+      { role: 'user', content: buildUserContent(`Analyze these ${done.length} proposal(s) and create a unified comparison matrix.
+
+VERIFIED DATA — treat these as ground truth. Do not contradict them anywhere in your output:
+${verifiedContext}
+
+⚠ PRICE RULE: Never put a dollar amount in any "detail" field. The totals above are already shown separately — repeating them in section items causes errors.
+
+Return this exact JSON structure:
+{
+  "projectType": "Brief label in ${lang}",
+  "scopeDescription": "2-3 sentence plain-language summary in ${lang} of what these proposals are for — explain as if to a client with no engineering background",
+  "sections": [
+    {
+      "name": "SECTION NAME",
+      "items": [
+        {
+          "id": "unique_snake_case_id",
+          "label": "Concise item description in ${lang} (max 60 chars)",
+          "unit": "LS or EA or HR or % or rounds or blank",
+          "values": [
+            { "status": "included", "detail": null },
+            { "status": "not_included", "detail": null }
+          ]
+        }
+      ]
+    }
+  ],
+  "hourlyRates": [
+    {
+      "role": "Role title",
+      "rates": ["$350", null, "$385"]
+    }
+  ],
+  "recommendation": "In ${lang}: write a sharp, executive-level recommendation — the kind a VP gives to a CEO in 4-5 sentences. Go beyond price. Name the recommended firm and explain what specifically makes their proposal stand out: their methodology, how they handle revisions, the depth of their deliverables, their qualifications, or anything that shows they've thought through this project more carefully than the others. Then name any real risks or trade-offs with the alternatives — not vague statements, but specific differences visible in the proposals. Do not say 'best value' or 'comprehensive scope' without explaining exactly what that means in context. Write in the first person, like a senior advisor who has read all three proposals."
+}
+
+Rules for values array (one entry per proposal, in order):
+- "status": exactly "included", "not_included", or "not_specified"
+- "detail": short specific value if relevant, otherwise null. Never the string "null".
+- For quantities/counts, put the number as the detail (e.g. "26 units", "3 rounds", "62 fixtures")
+- Keep labels comparable and neutral across proposals
+- CRITICAL: Never put a dollar total in a "detail" field. Prices belong only in the verified totals — not in section items.
+
+For hourlyRates — IMPORTANT:
+- Use the pre-extracted rates in the VERIFIED DATA above — these are complete and authoritative
+- Create one row per unique role across all proposals. Include EVERY role listed for any proposal.
+- "rates" has one entry per proposal (in order). Use JSON null if that proposal doesn't list that role.
+- Normalize similar role names across proposals so they align in the same row
+- If no proposals have rates, set "hourlyRates" to []
+
+How to structure sections — be as granular as the proposals allow:
+- SCOPE OF SERVICES: one item per distinct type of work (e.g. "Panel / switchgear installation", "Light fixture installation", "Data & low-voltage cabling", "HVAC wiring", "GFCI receptacles") — not one catch-all item
+- If proposals list specific quantities (fixture counts, receptacle counts, circuits), put those counts in the "detail" field (e.g. "26 units")
+- EXCLUSIONS: one item per explicit exclusion listed in any proposal
+- NOTES & CONDITIONS: delivery timeline, crew size, overtime policy, parking, materials spec (copper wire, etc.)
+- PRICING & PAYMENT: payment terms only — do NOT repeat the total price here
+- Omit TERMS & CONDITIONS unless meaningfully different across proposals
+
+Aim for 25–60 items total — err on the side of more detail, not less.
+
+${done.length} proposal(s):
+${proposalTexts}`) }
+    ], 5000);
+
+    comparisonData = result;
+    comparisonData._proposals = done; // attach for rendering
+
+    renderComparisonTable();
+    statusEl.className = 'analyze-status done';
+    statusEl.textContent = `✓ ${result.sections.reduce((n,s) => n + s.items.length, 0)} comparable items found`;
+    document.getElementById('actions-bar').style.display = 'flex';
+    if (document.getElementById('proj-category').value === '') {
+      document.getElementById('proj-category').value = result.projectType || '';
+    }
+  } catch(err) {
+    statusEl.className = 'analyze-status err';
+    statusEl.textContent = '✗ ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Re-analyze';
+  }
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtPrice(v) {
+  if (!v && v !== 0) return '—';
+  return '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function valueBadge(val) {
+  if (!val) return '<span class="badge b-na">—</span>';
+  const { status, detail } = val;
+  if (detail) return `<span class="badge b-det">${esc(detail)}</span>`;
+  if (status === 'included')     return '<span class="badge b-inc">✓ Included</span>';
+  if (status === 'not_included') return '<span class="badge b-exc">✗ Not included</span>';
+  return '<span class="badge b-na">Not specified</span>';
+}
+
+function renderCards() {
+  const grid = document.getElementById('proposals-grid');
+  grid.style.display = proposals.length ? 'grid' : 'none';
+  grid.innerHTML = '';
+  for (const p of proposals) {
+    const card = document.createElement('div');
+    card.className = 'proposal-card ' + p.status;
+
+    if (p.status === 'processing') {
+      card.innerHTML = `
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="spinner"></span>&nbsp; Processing…</div>
+            <div class="card-sub">${esc(p.filename)}</div>
+          </div>
+        </div>`;
+    } else if (p.status === 'error') {
+      card.innerHTML = `
+        <div class="card-header">
+          <div><div class="card-title">❌ Error</div><div class="card-sub">${esc(p.filename)}</div></div>
+          <button class="remove-btn" onclick="removeProposal('${p.id}')">✕</button>
+        </div>
+        <div style="color:#c53030;font-size:0.8rem;margin-top:4px">${esc(p.errorMsg||'')}</div>`;
+    } else {
+      const priceStr = p.totalPrice != null ? fmtPrice(p.totalPrice) : '';
+      card.innerHTML = `
+        <div class="card-header">
+          <div style="min-width:0">
+            <div class="card-title">${esc(p.company || p.filename)}</div>
+            <div class="card-sub">${esc(p.filename)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="parse-badge ai">${p.isScanned ? '👁 Vision' : '🤖 AI'}</span>
+            <button class="remove-btn" onclick="removeProposal('${p.id}')">✕</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Company / Firm</div>
+          <input class="field-input" value="${esc(p.company)}" placeholder="Company name"
+            onchange="setField('${p.id}','company',this.value)">
+        </div>
+        <div class="two-col">
+          <div class="field-group">
+            <div class="field-label">Contact</div>
+            <input class="field-input" value="${esc(p.contact)}" placeholder="Name"
+              onchange="setField('${p.id}','contact',this.value)">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Date</div>
+            <input class="field-input" value="${esc(p.date)}" placeholder="Date"
+              onchange="setField('${p.id}','date',this.value)">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-group">
+            <div class="field-label">Phone</div>
+            <input class="field-input" value="${esc(p.phone)}" placeholder="Phone"
+              onchange="setField('${p.id}','phone',this.value)">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Email</div>
+            <input class="field-input" value="${esc(p.email)}" placeholder="Email"
+              onchange="setField('${p.id}','email',this.value)">
+          </div>
+        </div>
+        <div class="field-group" style="margin-top:4px">
+          <div class="field-label">Total / Lump Sum</div>
+          <input class="field-input price-field" value="${esc(priceStr)}" placeholder="$0.00"
+            onchange="setTotal('${p.id}',this.value)">
+        </div>`;
+    }
+    grid.appendChild(card);
+  }
+}
+
+function setField(id, field, value) {
+  const p = proposals.find(x => x.id === id);
+  if (p) p[field] = value;
+}
+
+function setTotal(id, raw) {
+  const p = proposals.find(x => x.id === id);
+  if (!p) return;
+  const v = parseFloat(raw.replace(/[$,\s]/g,''));
+  p.totalPrice = isNaN(v) ? null : v;
+}
+
+function removeProposal(id) {
+  proposals = proposals.filter(x => x.id !== id);
+  if (comparisonData) {
+    comparisonData._proposals = comparisonData._proposals?.filter(x => x.id !== id);
+  }
+  renderCards();
+  updateAnalyzeBar();
+  renderComparisonTable();
+}
+
+function updateAnalyzeBar() {
+  const bar = document.getElementById('analyze-bar');
+  const desc = document.getElementById('analyze-desc');
+  const done = proposals.filter(p => p.status === 'done');
+  const processing = proposals.some(p => p.status === 'processing');
+
+  if (done.length === 0 && !processing) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+
+  if (done.length === 1) {
+    desc.textContent = '1 proposal loaded. Add more to compare, or analyze this one alone.';
+  } else {
+    desc.textContent = `${done.length} proposals loaded. Click Analyze to generate the comparison matrix.`;
+  }
+  document.getElementById('analyze-btn').disabled = processing || done.length === 0;
+}
+
+function renderComparisonTable() {
+  const wrapper = document.getElementById('comparison-wrapper');
+  const table   = document.getElementById('comparison-table');
+
+  if (!comparisonData || !comparisonData._proposals?.length) {
+    wrapper.style.display = 'none';
+    return;
+  }
+  wrapper.style.display = 'block';
+
+  const done = comparisonData._proposals;
+  document.getElementById('project-type-badge').textContent = comparisonData.projectType || '';
+
+  // Scope description
+  const scopeDescEl = document.getElementById('scope-description');
+  if (comparisonData.scopeDescription) {
+    scopeDescEl.style.display = 'block';
+    scopeDescEl.textContent = comparisonData.scopeDescription;
+  } else {
+    scopeDescEl.style.display = 'none';
+  }
+
+  const N = done.length;
+  let html = `<thead><tr>
+    <th style="min-width:260px">Item</th>
+    <th style="min-width:60px">Unit</th>
+    ${done.map(p => `<th style="min-width:160px">${esc(p.company||p.filename)}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  for (const section of (comparisonData.sections || [])) {
+    html += `<tr class="sec-row"><td colspan="${2 + N}">${esc(section.name)}</td></tr>`;
+    for (const item of (section.items || [])) {
+      html += `<tr><td>${esc(item.label)}</td><td style="color:#a0aec0;font-size:0.78rem">${esc(item.unit||'')}</td>`;
+      for (let i = 0; i < N; i++) {
+        html += `<td>${valueBadge(item.values?.[i])}</td>`;
+      }
+      html += '</tr>';
+    }
+  }
+
+  // Total row
+  html += `<tr class="tot-row"><td colspan="2"><strong>TOTAL / LUMP SUM</strong></td>`;
+  for (const p of done) {
+    html += `<td><strong>${fmtPrice(p.totalPrice)}</strong></td>`;
+  }
+  html += '</tr>';
+
+  // Hourly Rates section
+  const rates = comparisonData.hourlyRates || [];
+  if (rates.length) {
+    html += `<tr><td colspan="${2+N}" style="padding:0;height:10px"></td></tr>`;
+    html += `<tr class="sec-row"><td colspan="${2+N}">HOURLY RATES</td></tr>`;
+    for (const row of rates) {
+      html += `<tr><td>${esc(row.role)}</td><td style="color:#a0aec0;font-size:0.78rem">HR</td>`;
+      for (let i = 0; i < N; i++) {
+        const r = (row.rates?.[i] && row.rates[i] !== 'null') ? row.rates[i] : null;
+        html += `<td>${r ? `<span class="badge b-det">${esc(r)}</span>` : '<span class="badge b-na">—</span>'}</td>`;
+      }
+      html += '</tr>';
+    }
+  }
+
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  // Recommendation
+  const recBox = document.getElementById('recommendation-box');
+  const recText = comparisonData.recommendation || '';
+  if (recText) {
+    recBox.style.display = 'block';
+    document.getElementById('recommendation-text').textContent = recText;
+  } else {
+    recBox.style.display = 'none';
+  }
+}
+
+// ── Excel Generation ──────────────────────────────────────────────────────────
+async function generateExcel() {
+  if (!comparisonData) return;
+  const done = comparisonData._proposals || [];
+  if (!done.length) return;
+
+  const projCompany  = document.getElementById('proj-company').value;
+  const projName     = document.getElementById('proj-name').value;
+  const projLocation = document.getElementById('proj-location').value;
+  const projCategory = document.getElementById('proj-category').value || comparisonData.projectType || '';
+  const N = done.length;
+  const TOTAL_COLS = 2 + N; // Item + Unit + N proposals
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Comparison');
+
+  // Column widths — auto-size proposal columns to fit company name
+  ws.getColumn(1).width = 46;  // Item
+  ws.getColumn(2).width = 8;   // Unit
+  for (let i = 0; i < N; i++) {
+    const nameLen = (done[i].company || done[i].filename || '').length;
+    ws.getColumn(3 + i).width = Math.max(24, Math.min(nameLen + 4, 42));
+  }
+
+  const C = {
+    navy: 'FF1F3864', navy2: 'FF2C4770', dgray: 'FF4A5568',
+    mgray: 'FFD6D6D6', lgray: 'FFF5F5F5', white: 'FFFFFFFF',
+    yellow: 'FFFFFF00', salmon: 'FFFFCCCC', green: 'FFE8F5E9',
+    blue: 'FFE8F0FE', black: 'FF000000',
+  };
+
+  function fill(argb) { return { type:'pattern', pattern:'solid', fgColor:{argb} }; }
+  function font(opts={}) { return { name:'Calibri', size:10, ...opts }; }
+  function border() {
+    const b = { style:'thin', color:{argb:'FFB0B0B0'} };
+    return { top:b, bottom:b, left:b, right:b };
+  }
+  function style(cell, { bg, fg=C.black, bold=false, size=10, italic=false,
+                          halign='left', valign='middle', wrap=false, numFmt, indent=0 }={}) {
+    if (bg) cell.fill = fill(bg);
+    cell.font = font({ bold, color:{argb:fg}, size, italic });
+    cell.alignment = { horizontal:halign, vertical:valign, wrapText:wrap, indent };
+    if (numFmt) cell.numFmt = numFmt;
+  }
+  function merge(r1,c1,r2,c2) { try { ws.mergeCells(r1,c1,r2,c2); } catch(e){} }
+
+  let R = 0;
+
+  // ── Project Header ────────────────────────────────────────────────────────
+  for (const [label, value] of [
+    ['COMPANY NAME', projCompany],
+    ['PROJECT NAME', projName],
+    ['LOCATION',     projLocation],
+    ['BID CATEGORY', projCategory],
+  ]) {
+    R++; ws.getRow(R).height = 20;
+    merge(R,1,R,2);
+    const lc = ws.getRow(R).getCell(1);
+    lc.value = label;
+    style(lc, { bg:C.navy, fg:C.white, bold:true, halign:'right' });
+    merge(R,3,R,TOTAL_COLS);
+    const vc = ws.getRow(R).getCell(3);
+    vc.value = value;
+    style(vc, { bg:C.mgray, bold:label==='BID CATEGORY', size:label==='BID CATEGORY'?13:10, indent:1 });
+  }
+
+  // Scope description row
+  if (comparisonData.scopeDescription) {
+    R++; ws.getRow(R).height = 5;
+    R++; ws.getRow(R).height = 48;
+    merge(R,1,R,TOTAL_COLS);
+    const sdCell = ws.getRow(R).getCell(1);
+    sdCell.value = comparisonData.scopeDescription;
+    style(sdCell, { bg:'FFF7FAFC', size:9, italic:true, wrap:true, valign:'top', indent:2, fg:'FF4A5568' });
+    sdCell.border = { bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
+  }
+
+  // Spacer
+  R++; ws.getRow(R).height = 10;
+
+  // ── Contractor Headers ────────────────────────────────────────────────────
+  R++; ws.getRow(R).height = 22;
+  const companyRow = ws.getRow(R);
+  for (let i = 0; i < N; i++) {
+    const c = companyRow.getCell(3 + i);
+    c.value = done[i].company.toUpperCase();
+    style(c, { bg:C.navy, fg:C.white, bold:true, size:11, halign:'center' });
+  }
+
+  for (const [label, getter] of [
+    ['Contact Name',  p => p.contact],
+    ['Contact Email', p => p.email],
+    ['Contact Phone', p => p.phone],
+    ['Proposal Date', p => p.date],
+  ]) {
+    R++; ws.getRow(R).height = 16;
+    merge(R,1,R,2);
+    const lc = ws.getRow(R).getCell(1);
+    lc.value = label;
+    style(lc, { bold:true, halign:'right', size:9 });
+    for (let i = 0; i < N; i++) {
+      const c = ws.getRow(R).getCell(3 + i);
+      c.value = getter(done[i]);
+      style(c, { bg: i%2 ? C.lgray : C.white, halign:'center', size:9 });
+    }
+  }
+
+  // Total Base
+  R++; ws.getRow(R).height = 18;
+  merge(R,1,R,2);
+  const tbL = ws.getRow(R).getCell(1);
+  tbL.value = 'TOTAL / LUMP SUM';
+  style(tbL, { bold:true, halign:'right', size:10 });
+  for (let i = 0; i < N; i++) {
+    const c = ws.getRow(R).getCell(3 + i);
+    c.value = done[i].totalPrice || null;
+    style(c, { bold:true, size:12, halign:'right', numFmt:'"$"#,##0.00' });
+  }
+
+  // Payment terms
+  R++; ws.getRow(R).height = 15;
+  merge(R,1,R,2);
+  ws.getRow(R).getCell(1).value = 'PAYMENT TERMS';
+  style(ws.getRow(R).getCell(1), { bold:true, halign:'right', size:9 });
+  for (let i = 0; i < N; i++) {
+    const c = ws.getRow(R).getCell(3 + i);
+    c.value = 'TO BE DETERMINED IN CONTRACT';
+    style(c, { halign:'center', size:9 });
+  }
+
+  // Spacer
+  R++; ws.getRow(R).height = 8;
+
+  // ── Column Headers ────────────────────────────────────────────────────────
+  R++; ws.getRow(R).height = 20;
+  for (const [col, label] of [[1,'ITEM DESCRIPTION'],[2,'UNIT'],...done.map((_,i) => [3+i,'BID'])]) {
+    const c = ws.getRow(R).getCell(col);
+    c.value = label;
+    style(c, { bg:C.dgray, fg:C.white, bold:true, size:9, halign:'center' });
+    c.border = border();
+  }
+
+  // Spacer
+  R++; ws.getRow(R).height = 5;
+
+  // ── Scope Sections ────────────────────────────────────────────────────────
+  function valLabel(val) {
+    if (!val) return 'Not specified';
+    if (val.detail) return val.detail;
+    if (val.status === 'included') return 'Included';
+    if (val.status === 'not_included') return 'Not included';
+    return 'Not specified';
+  }
+
+  function valBg(val, rowBg) {
+    if (!val) return rowBg;
+    if (val.detail) return C.blue;
+    if (val.status === 'included') return rowBg === C.lgray ? 'FFE8F5E9' : C.green;
+    if (val.status === 'not_included') return C.salmon;
+    return C.yellow;
+  }
+
+  for (const section of (comparisonData.sections || [])) {
+    // Section header
+    R++; ws.getRow(R).height = 17;
+    merge(R,1,R,TOTAL_COLS);
+    const sh = ws.getRow(R).getCell(1);
+    sh.value = section.name;
+    style(sh, { bg:C.navy2, fg:C.white, bold:true, size:9, indent:1 });
+
+    R++; ws.getRow(R).height = 5;
+
+    for (const item of (section.items || [])) {
+      R++; ws.getRow(R).height = 15;
+      const rowBg = R % 2 === 0 ? C.lgray : C.white;
+
+      const dc = ws.getRow(R).getCell(1);
+      dc.value = item.label;
+      style(dc, { bg:rowBg, size:9, indent:3 });
+      dc.border = border();
+
+      const uc = ws.getRow(R).getCell(2);
+      uc.value = item.unit || null;
+      style(uc, { bg:rowBg, size:9, halign:'center', fg:'FFAAAAAA' });
+      uc.border = border();
+
+      for (let i = 0; i < N; i++) {
+        const val = item.values?.[i];
+        const bc = ws.getRow(R).getCell(3 + i);
+        bc.value = valLabel(val);
+        style(bc, { bg:valBg(val, rowBg), size:9, halign:'center',
+                    bold: val?.status === 'included' && !val?.detail });
+        bc.border = border();
+      }
+    }
+
+    R++; ws.getRow(R).height = 6;
+  }
+
+  // ── Total Row ─────────────────────────────────────────────────────────────
+  R++; ws.getRow(R).height = 22;
+  merge(R,1,R,2);
+  const totL = ws.getRow(R).getCell(1);
+  totL.value = 'TOTAL / LUMP SUM';
+  style(totL, { bg:C.navy, fg:C.white, bold:true, size:11, halign:'center' });
+  for (let i = 0; i < N; i++) {
+    const c = ws.getRow(R).getCell(3 + i);
+    c.value = done[i].totalPrice || null;
+    style(c, { bg:C.navy, fg:C.white, bold:true, size:13, halign:'right', numFmt:'"$"#,##0.00' });
+  }
+
+  // ── Hourly Rates ──────────────────────────────────────────────────────────
+  const rateRows = comparisonData.hourlyRates || [];
+  if (rateRows.length) {
+    R++; ws.getRow(R).height = 10; // spacer
+
+    R++; ws.getRow(R).height = 17;
+    merge(R,1,R,TOTAL_COLS);
+    const rh = ws.getRow(R).getCell(1);
+    rh.value = 'HOURLY RATES';
+    style(rh, { bg:C.navy2, fg:C.white, bold:true, size:9, indent:1 });
+
+    R++; ws.getRow(R).height = 5;
+
+    // Sub-header
+    R++; ws.getRow(R).height = 15;
+    const rhdr = ws.getRow(R);
+    merge(R,1,R,2);
+    const roleLbl = rhdr.getCell(1);
+    roleLbl.value = 'ROLE';
+    style(roleLbl, { bg:C.dgray, fg:C.white, bold:true, size:9, halign:'center' });
+    roleLbl.border = border();
+    for (let i = 0; i < N; i++) {
+      const c = rhdr.getCell(3 + i);
+      c.value = 'HOURLY RATE';
+      style(c, { bg:C.dgray, fg:C.white, bold:true, size:9, halign:'center' });
+      c.border = border();
+    }
+
+    for (const row of rateRows) {
+      R++; ws.getRow(R).height = 15;
+      const rowBg = R % 2 === 0 ? C.lgray : C.white;
+      merge(R,1,R,2);
+      const rc = ws.getRow(R).getCell(1);
+      rc.value = row.role;
+      style(rc, { bg:rowBg, size:9, indent:2 });
+      rc.border = border();
+      for (let i = 0; i < N; i++) {
+        const rate = (row.rates?.[i] && row.rates[i] !== 'null') ? row.rates[i] : null;
+        const bc = ws.getRow(R).getCell(3 + i);
+        bc.value = rate || '—';
+        style(bc, { bg: rate ? C.blue : rowBg, size:9, halign:'center', bold:!!rate });
+        bc.border = border();
+      }
+    }
+    R++; ws.getRow(R).height = 6;
+  }
+
+  // ── Recommendation ────────────────────────────────────────────────────────
+  const rec = comparisonData.recommendation || '';
+  if (rec) {
+    R++; ws.getRow(R).height = 10; // spacer
+
+    R++; ws.getRow(R).height = 17;
+    merge(R,1,R,TOTAL_COLS);
+    const recHdr = ws.getRow(R).getCell(1);
+    recHdr.value = 'AI RECOMMENDATION';
+    style(recHdr, { bg:'FF744210', fg:C.white, bold:true, size:9, indent:1 });
+
+    R++; ws.getRow(R).height = 5;
+
+    R++; ws.getRow(R).height = 60;
+    merge(R,1,R,TOTAL_COLS);
+    const recCell = ws.getRow(R).getCell(1);
+    recCell.value = rec;
+    style(recCell, { bg:'FFFFFBEB', size:10, wrap:true, valign:'top', indent:2 });
+    recCell.border = { top:{style:'thin',color:{argb:'FFF6D860'}}, bottom:{style:'thin',color:{argb:'FFF6D860'}},
+                       left:{style:'thin',color:{argb:'FFF6D860'}}, right:{style:'thin',color:{argb:'FFF6D860'}} };
+  }
+
+  // ── Download ──────────────────────────────────────────────────────────────
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  const clean = (projName||comparisonData.projectType||'Proposals').replace(/[^\w\s]/g,'').replace(/\s+/g,'_').slice(0,40);
+  a.download = `Comparison_${clean}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const msg = document.getElementById('status-msg');
+  msg.className = 'ok-msg';
+  msg.textContent = '✓ Excel downloaded';
+  setTimeout(() => { msg.textContent = ''; msg.className = ''; }, 4000);
+}
+</script>
+</body>
+</html>

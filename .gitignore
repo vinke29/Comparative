@@ -1,0 +1,5 @@
+# API key — never commit this
+config.js
+
+# PDF proposals — keep out of repo
+*.pdf
