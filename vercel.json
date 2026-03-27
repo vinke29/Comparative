@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/openai", "destination": "/api/openai" }
+    { "source": "/api/openai", "destination": "/api/openai" },
+    { "source": "/", "destination": "/comparador.html" }
   ]
 }
