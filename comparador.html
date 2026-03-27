@@ -416,18 +416,34 @@ async function extractPDFContent(file) {
 }
 
 // ── OpenAI Helper ─────────────────────────────────────────────────────────────
+// Routes through /api/openai (Vercel serverless proxy — key lives in env var).
+// Falls back to direct API call when config.js provides a key (local dev).
 async function openaiChat(messages, maxTokens = 2000) {
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      max_tokens: maxTokens,
-      messages
-    })
+  const body = JSON.stringify({
+    model: 'gpt-4o-mini',
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    max_tokens: maxTokens,
+    messages
   });
+
+  let resp;
+  if (apiKey) {
+    // Local dev: call OpenAI directly with key from config.js
+    resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body
+    });
+  } else {
+    // Production: proxy through Vercel serverless function
+    resp = await fetch('/api/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+  }
+
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
     throw new Error(err.error?.message || `HTTP ${resp.status}`);
